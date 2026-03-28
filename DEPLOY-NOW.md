@@ -1,120 +1,130 @@
-# Deploy Nova Retail to the web (step by step)
+# Deploy on **Vercel** (web) + **Render** (API)
 
-You deploy **two pieces**:
+This is the recommended split:
 
-| Piece | What it is | Typical host |
-|-------|------------|--------------|
-| **API** | Node app in `server/` | Railway, Render, Fly.io |
-| **Web app** | Static files from `npm run build` | Vercel, Netlify, Cloudflare Pages |
+| Layer | Host | What it runs |
+|-------|------|----------------|
+| **Database** | [Neon](https://neon.tech) (free Postgres) | Connection string only — no server to manage |
+| **API** | [Render](https://render.com) | Node app in `server/` (this repo includes `render.yaml`) |
+| **Web app** | [Vercel](https://vercel.com) | Static `dist/` from Vite (`vercel.json` handles SPA routing) |
 
-The database is **PostgreSQL** (Neon, Supabase, or the DB bundled with Railway/Render).
+PostgreSQL is required (Prisma is configured for it). Local dev: `docker compose` or Neon — see `README.md`.
 
 ---
 
-## Part A — PostgreSQL database
+## 1) Push code to GitHub
 
-### Option A1: Neon (free tier, good default)
+See `GITHUB.md`. Render and Vercel both deploy from a Git repo.
 
-1. Go to [neon.tech](https://neon.tech) and sign up.
-2. Create a project; copy the **connection string** (starts with `postgresql://` or `postgres://`).
-3. Keep it for Part B (`DATABASE_URL`).
+---
 
-### Option A2: Docker on your machine only (local dev)
+## 2) Create a PostgreSQL database (Neon)
+
+1. Sign up at [neon.tech](https://neon.tech) → create a project.
+2. Copy the **connection string** (starts with `postgresql://`).  
+   You will use it as **`DATABASE_URL`** on Render.
+
+---
+
+## 3) Deploy the API on Render
+
+### Option A — Blueprint (uses `render.yaml` in this repo)
+
+1. [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint**.
+2. Connect your GitHub repo and select the branch (e.g. `main`).
+3. Render reads `render.yaml` and creates a **Web Service** with `rootDir: server`.
+4. When prompted, set **`DATABASE_URL`** to your **Neon** connection string.
+5. **`JWT_SECRET`** can use the auto-generated value from the blueprint, or set your own in **Environment**.
+6. Click **Apply** / finish deploy.
+
+### Option B — Manual Web Service
+
+1. **New** → **Web Service** → connect the same repo.
+2. **Root Directory:** `server`
+3. **Build Command:**  
+   `npm install && npx prisma generate && npx prisma db push`
+4. **Start Command:**  
+   `npm start`
+5. **Environment** (minimum):
+
+   | Key | Value |
+   |-----|--------|
+   | `NODE_VERSION` | `20` |
+   | `DATABASE_URL` | Your Neon connection string |
+   | `JWT_SECRET` | Long random string (e.g. `openssl rand -hex 32`) |
+
+   Render injects **`PORT`** — the app already reads it.
+
+6. **Health check path:** `/api/health` (optional but recommended).
+
+7. After deploy, copy the service URL, e.g. `https://nova-retail-api.onrender.com`.
+
+8. **Test:**
+
+   ```bash
+   curl https://YOUR-SERVICE.onrender.com/api/health
+   ```
+
+   Expect: `{"ok":true}`
+
+### Seed demo users & products (one-time)
+
+From your laptop (same DB as production):
 
 ```bash
-docker compose up -d
+cd server
+export DATABASE_URL="postgresql://...your-neon-url..."
+npx prisma db push
+npx prisma db seed
 ```
 
-Use `server/.env` with:
-
-`DATABASE_URL="postgresql://nova:nova@localhost:5432/nova_retail?schema=public"`
+Or use **Render Shell** (if available on your plan) with the same commands and `DATABASE_URL` from the service environment.
 
 ---
 
-## Part B — Deploy the API (Railway example)
+## 4) Deploy the frontend on Vercel
 
-1. Push this repo to **GitHub** (see `GITHUB.md`).
-2. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub** → select the repo.
-3. **Add service** → pick the same repo, set **Root Directory** to `server`.
-4. **Add PostgreSQL** in the project (Railway plugin) **or** use Neon: **Variables** → add `DATABASE_URL` = your Neon URL.
-5. **Variables** (service):
+1. [vercel.com](https://vercel.com) → **Add New** → **Project** → import the **same** GitHub repo.
+2. **Framework Preset:** Vite  
+3. **Root Directory:** `.` (repository root, not `server`).
+4. **Build Command:** `npm run build`  
+5. **Output Directory:** `dist`
+6. **Environment Variables:**
 
    | Name | Value |
    |------|--------|
-   | `DATABASE_URL` | From Neon **or** Railway Postgres (copy “Connect” URL) |
-   | `JWT_SECRET` | Long random string (generate locally: `openssl rand -hex 32`) |
-   | `PORT` | Often auto-set by Railway — if required, use `3001` |
+   | `VITE_API_URL` | Your Render API URL **with no trailing slash**, e.g. `https://nova-retail-api.onrender.com` |
 
-6. **Settings → Deploy** → **Custom start command** (if needed): `npm start`  
-   **Custom build command** (if needed):
+7. Deploy. Open the `.vercel.app` URL — sign in and browse products.
 
-   ```bash
-   npm install && npx prisma generate && npx prisma db push
-   ```
-
-7. After deploy, open the **public URL** Railway gives you (e.g. `https://nova-retail-api.up.railway.app`). Test:
-
-   ```bash
-   curl https://YOUR-API-HOST/api/health
-   ```
-
-8. **Seed demo data** (one-time). From your laptop (with `DATABASE_URL` pointing at the **same** DB):
-
-   ```bash
-   cd server
-   export DATABASE_URL="postgresql://..."   # same as production
-   npx prisma db push
-   npx prisma db seed
-   ```
-
-   Or use Railway’s **one-off shell** / **Run command** with the same commands.
+**Note:** `vercel.json` rewrites all routes to `index.html` so React Router works on refresh.
 
 ---
 
-## Part C — Deploy the frontend (Vercel example)
+## 5) Checklist
 
-1. Go to [vercel.com](https://vercel.com) → **Add New** → **Project** → import the **same** GitHub repo.
-2. Framework: **Vite**. Root directory: **`.`** (repo root, not `server`).
-3. **Build Command:** `npm run build`  
-   **Output Directory:** `dist`
-4. **Environment Variables:**
-
-   | Name | Value |
-   |------|--------|
-   | `VITE_API_URL` | Your API’s public URL **with no trailing slash**, e.g. `https://nova-retail-api.up.railway.app` |
-
-5. Deploy. Open the Vercel URL → log in → products should load from the API.
-
-> If the browser shows CORS errors, the API already allows CORS; ensure `VITE_API_URL` is exactly the origin Railway shows (https, no path).
+- [ ] Neon `DATABASE_URL` is set on Render and matches what you used for `db seed`.
+- [ ] `curl https://YOUR-RENDER-URL/api/health` works.
+- [ ] `VITE_API_URL` on Vercel is exactly your Render API origin (https, no path).
+- [ ] After changing `VITE_API_URL`, trigger a **Redeploy** on Vercel so the client rebuilds.
 
 ---
 
-## Part D — Same machine (one VPS) alternative
+## Troubleshooting (Vercel + Render)
 
-If you use a **single Linux server** with Nginx:
-
-1. Install Node, PostgreSQL (or use Neon remotely).
-2. Build: `VITE_API_URL=` empty **if** Nginx serves the app and proxies `/api` to `127.0.0.1:3001` (see `DEPLOYMENT.md`).
-3. Otherwise set `VITE_API_URL` at build time to your API subdomain.
-
----
-
-## Checklist
-
-- [ ] `DATABASE_URL` is PostgreSQL everywhere (local + Railway).
-- [ ] `npx prisma db push` and `npx prisma db seed` ran against production DB once.
-- [ ] `JWT_SECRET` set on the API.
-- [ ] `VITE_API_URL` on Vercel matches your live API base URL.
-- [ ] `curl https://YOUR-API/api/health` returns `{"ok":true}`.
+| Issue | What to do |
+|-------|------------|
+| Render **build** fails on Prisma | Logs should show `prisma generate` / `db push`. Ensure `DATABASE_URL` is valid and Postgres allows connections from Render’s IPs (Neon allows all by default). |
+| API **502** / cold start | Free Render web services **spin down** after idle; first request can take ~30–60s. Upgrade or accept cold starts for demos. |
+| Blank API responses / CORS | API uses `cors` with `origin: true`. Set `VITE_API_URL` to the **exact** public API URL. |
+| Vercel app loads but no products | Wrong or missing `VITE_API_URL`; redeploy after fixing env. |
+| Login fails | Run `db seed` against the **same** DB Render uses. |
 
 ---
 
-## Troubleshooting
+## Alternatives
 
-| Problem | What to check |
-|--------|----------------|
-| API 502 / crash | Railway logs; `prisma generate` + `db push` in build |
-| Frontend can’t load products | Wrong `VITE_API_URL`; rebuild after changing env |
-| 401 on login | DB not seeded; run `db seed` against production `DATABASE_URL` |
+- **API on Railway** instead of Render: see older steps in git history or `DEPLOYMENT.md`.
+- **Database on Render Postgres** instead of Neon: create a Postgres instance on Render and set `DATABASE_URL` to its **Internal** or **External** URL as appropriate.
 
-For more detail (Nginx, split hosts), see `DEPLOYMENT.md`.
+For Nginx / single-VPS deploys, see `DEPLOYMENT.md`.
