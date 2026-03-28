@@ -1,0 +1,15 @@
+# Local PostgreSQL for development (optional — you can use Neon instead; see README).
+services:
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: nova
+      POSTGRES_PASSWORD: nova
+      POSTGRES_DB: nova_retail
+    volumes:
+      - nova_pgdata:/var/lib/postgresql/data
+
+volumes:
+  nova_pgdata:

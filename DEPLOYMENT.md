@@ -5,6 +5,8 @@ This project has **two deployable parts**:
 1. **Frontend** — static files from `npm run build` (Vite/React).
 2. **Backend** — Node.js API in `server/` (Express + Prisma).
 
+**Quick deploy guide:** see **`DEPLOY-NOW.md`** (Neon + Railway + Vercel, step by step).
+
 They must be able to talk to each other over HTTPS in production. The frontend calls the API using either:
 
 - **Same domain** — e.g. `https://yourdomain.com` serves the app and `https://yourdomain.com/api` is proxied to Node, **or**

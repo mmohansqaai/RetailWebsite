@@ -9,7 +9,7 @@ A realistic React + Vite retail web app (storefront + ops workspace) you can run
 - JavaScript (ESM)
 - `react-router-dom` (routing)
 - `zustand` (client state)
-- **Backend**: Express + Prisma + **SQLite** (file DB, good for local dev; you can switch to PostgreSQL by changing `DATABASE_URL` in `server/.env`)
+- **Backend**: Express + Prisma + **PostgreSQL** (local Docker or a free Neon DB — see `server/.env.example`)
 
 ## Prerequisites
 
@@ -27,12 +27,22 @@ npm -v
 
 ## Quick start (frontend + API + database)
 
+**1. PostgreSQL** — pick one:
+
+- **Docker (easiest locally):** from the project root run `docker compose up -d`, then use `server/.env` copied from `server/.env.example` (URL matches `docker-compose.yml`).
+- **Neon (free, no Docker):** create a project at [neon.tech](https://neon.tech), copy the connection string into `server/.env` as `DATABASE_URL=...`.
+
+**2. Install and migrate**
+
 From the project root:
 
 ```bash
 cd RetailWebsite
 npm install
 npm install --prefix server
+cp server/.env.example server/.env
+# Edit server/.env — set DATABASE_URL and JWT_SECRET
+
 cd server
 npx prisma generate
 npx prisma db push

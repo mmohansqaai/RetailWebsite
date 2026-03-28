@@ -28,3 +28,6 @@ server/node_modules
 server/prisma/dev.db
 server/prisma/dev.db-journal
 server/.env
+
+# local Postgres data (if using docker-compose)
+postgres-data
