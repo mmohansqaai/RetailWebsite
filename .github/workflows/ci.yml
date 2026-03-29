@@ -40,6 +40,9 @@ jobs:
   server:
     name: Server (Prisma + schema)
     runs-on: ubuntu-latest
+    env:
+      # Schema uses env("DATABASE_URL"); validate/generate do not need a reachable DB
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
     steps:
       - name: Checkout
         uses: actions/checkout@v4
