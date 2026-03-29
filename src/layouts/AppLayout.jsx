@@ -17,7 +17,7 @@ export function AppLayout() {
     setToast({ name: lastAdded.name, qty: lastAdded.qty, at: lastAdded.at })
     const t = setTimeout(() => setToast(null), 1800)
     return () => clearTimeout(t)
-  }, [lastAdded?.at])
+  }, [lastAdded])
 
   return (
     <div className="rw-shell">
