@@ -45,3 +45,19 @@ export async function apiDeleteProduct(productId, token) {
     token
   })
 }
+
+export async function apiUpdateProductStock(productId, stock, token) {
+  return apiFetch(`/api/admin/products/${encodeURIComponent(productId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ stock }),
+    token
+  })
+}
+
+export async function apiRestockAll(stock, token) {
+  return apiFetch('/api/admin/products/restock-all', {
+    method: 'POST',
+    body: JSON.stringify({ stock }),
+    token
+  })
+}

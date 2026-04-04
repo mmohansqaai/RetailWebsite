@@ -20,6 +20,35 @@ function dto(p) {
   }
 }
 
+adminProductsRouter.post('/restock-all', requireAdmin, async (req, res) => {
+  try {
+    const stock = Math.max(0, Math.floor(Number(req.body?.stock ?? 50)))
+    const result = await prisma.product.updateMany({ data: { stock } })
+    res.json({ ok: true, updated: result.count, stock })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: 'Failed to restock catalog' })
+  }
+})
+
+adminProductsRouter.patch('/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = req.params.id
+    const body = req.body || {}
+    if (body.stock === undefined) return res.status(400).json({ error: 'stock is required' })
+    const stock = Math.max(0, Math.floor(Number(body.stock) || 0))
+    const p = await prisma.product.update({
+      where: { id },
+      data: { stock }
+    })
+    res.json(dto(p))
+  } catch (e) {
+    if (e?.code === 'P2025') return res.status(404).json({ error: 'Not found' })
+    console.error(e)
+    res.status(500).json({ error: 'Failed to update product' })
+  }
+})
+
 adminProductsRouter.post('/', requireAdmin, async (req, res) => {
   try {
     const body = req.body || {}

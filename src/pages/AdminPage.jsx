@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiCreateProduct, apiDeleteProduct, apiListProducts } from '../api/api'
+import {
+  apiCreateProduct,
+  apiDeleteProduct,
+  apiListProducts,
+  apiRestockAll,
+  apiUpdateProductStock
+} from '../api/api'
 import { useAuthStore } from '../stores/authStore'
 import { useSettingsStore } from '../stores/settingsStore'
 
@@ -11,20 +17,35 @@ function money(n) {
 export function AdminPage() {
   const token = useAuthStore((s) => s.session?.token)
   const { featureFlags } = useSettingsStore((s) => s.settings)
-  const [custom, setCustom] = useState([])
+  const [catalog, setCatalog] = useState([])
+  const [stockDrafts, setStockDrafts] = useState({})
+  const [bulkStock, setBulkStock] = useState('50')
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
+  const [busyId, setBusyId] = useState(null)
+  const [bulkBusy, setBulkBusy] = useState(false)
 
-  const loadCustom = useCallback(async () => {
+  const loadCatalog = useCallback(async () => {
     const all = await apiListProducts()
-    setCustom(all.filter((p) => !p.isSeed))
+    const sorted = [...all].sort((a, b) => a.name.localeCompare(b.name))
+    setCatalog(sorted)
+    setStockDrafts((prev) => {
+      const next = { ...prev }
+      for (const p of sorted) {
+        if (next[p.id] === undefined) next[p.id] = String(p.stock)
+      }
+      for (const id of Object.keys(next)) {
+        if (!sorted.some((p) => p.id === id)) delete next[id]
+      }
+      return next
+    })
   }, [])
 
   useEffect(() => {
-    loadCustom().catch((e) => setErr(e?.message || 'Failed to load products'))
-  }, [loadCustom])
+    loadCatalog().catch((e) => setErr(e?.message || 'Failed to load products'))
+  }, [loadCatalog])
 
-  const rows = useMemo(() => custom, [custom])
+  const rows = useMemo(() => catalog, [catalog])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -45,7 +66,7 @@ export function AdminPage() {
     try {
       await apiCreateProduct({ name, sku, category, price, stock, description, badges }, token)
       e.currentTarget.reset()
-      await loadCustom()
+      await loadCatalog()
       setMsg('Product saved to the database. It appears on the Products page.')
       window.dispatchEvent(new Event('nova-catalog-changed'))
     } catch (error) {
@@ -57,11 +78,46 @@ export function AdminPage() {
     setErr('')
     try {
       await apiDeleteProduct(id, token)
-      await loadCustom()
+      await loadCatalog()
       setMsg('Product removed from the database.')
       window.dispatchEvent(new Event('nova-catalog-changed'))
     } catch (error) {
       setErr(error?.message || 'Could not remove product')
+    }
+  }
+
+  async function onSaveStock(p) {
+    setErr('')
+    setMsg('')
+    const raw = stockDrafts[p.id]
+    const stock = Math.max(0, Math.floor(Number(raw) || 0))
+    setBusyId(p.id)
+    try {
+      await apiUpdateProductStock(p.id, stock, token)
+      await loadCatalog()
+      setMsg(`Stock updated for ${p.name}.`)
+      window.dispatchEvent(new Event('nova-catalog-changed'))
+    } catch (error) {
+      setErr(error?.message || 'Could not update stock')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function onRestockAll() {
+    setErr('')
+    setMsg('')
+    const stock = Math.max(0, Math.floor(Number(bulkStock)))
+    setBulkBusy(true)
+    try {
+      const result = await apiRestockAll(stock, token)
+      await loadCatalog()
+      setMsg(`Restocked ${result.updated ?? rows.length} products to ${stock} units each.`)
+      window.dispatchEvent(new Event('nova-catalog-changed'))
+    } catch (error) {
+      setErr(error?.message || 'Could not restock catalog')
+    } finally {
+      setBulkBusy(false)
     }
   }
 
@@ -82,7 +138,7 @@ export function AdminPage() {
       <section className="rw-panel">
         <div className="rw-panel-title">Add product</div>
         <p className="rw-muted" style={{ marginBottom: '0.75rem' }}>
-          New products are stored in the server database (SQLite by default).
+          New products are stored in the server database.
         </p>
         <form className="rw-form rw-form-grid" onSubmit={onSubmit}>
           <label>
@@ -120,13 +176,40 @@ export function AdminPage() {
       </section>
 
       <section className="rw-panel">
-        <div className="rw-panel-title">Custom products ({rows.length})</div>
+        <div className="rw-panel-title">Catalog inventory ({rows.length})</div>
+        <p className="rw-muted" style={{ marginBottom: '0.75rem' }}>
+          Adjust stock for any product (including seed data). Use after automation runs that place orders and
+          deplete inventory.
+        </p>
+        <div className="rw-row" style={{ marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <label className="rw-muted" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            Restock all to
+            <input
+              className="rw-input"
+              type="number"
+              min="0"
+              step="1"
+              value={bulkStock}
+              onChange={(e) => setBulkStock(e.target.value)}
+              style={{ width: '5rem' }}
+            />
+            units
+          </label>
+          <button
+            type="button"
+            className="rw-btn rw-btn-primary"
+            disabled={bulkBusy}
+            onClick={() => onRestockAll()}
+          >
+            {bulkBusy ? 'Applying…' : 'Apply to entire catalog'}
+          </button>
+        </div>
         {rows.length === 0 ? (
-          <div className="rw-muted">No admin-added products yet.</div>
+          <div className="rw-muted">No products in the database.</div>
         ) : (
           <div className="rw-table rw-table-admin">
             <div className="rw-table-head">
-              <div>Name</div>
+              <div>Product</div>
               <div>SKU</div>
               <div>Price</div>
               <div>Stock</div>
@@ -135,16 +218,42 @@ export function AdminPage() {
             {rows.map((p) => (
               <div key={p.id} className="rw-table-row">
                 <div>
-                  <div className="rw-card-title">{p.name}</div>
+                  <div className="rw-card-title">
+                    {p.name}
+                    {p.isSeed ? <span className="rw-badge" style={{ marginLeft: '0.35rem' }}>Seed</span> : null}
+                  </div>
                   <div className="rw-muted">{p.category}</div>
                 </div>
                 <div className="rw-muted">{p.sku}</div>
                 <div>{money(p.price)}</div>
-                <div>{p.stock}</div>
                 <div>
-                  <button type="button" className="rw-btn rw-btn-ghost" onClick={() => onRemove(p.id)}>
-                    Remove
+                  <input
+                    className="rw-input"
+                    type="number"
+                    min="0"
+                    step="1"
+                    aria-label={`Stock for ${p.name}`}
+                    value={stockDrafts[p.id] ?? String(p.stock)}
+                    onChange={(e) =>
+                      setStockDrafts((d) => ({ ...d, [p.id]: e.target.value }))
+                    }
+                    style={{ width: '5rem' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="rw-btn rw-btn-primary"
+                    disabled={busyId === p.id}
+                    onClick={() => onSaveStock(p)}
+                  >
+                    {busyId === p.id ? 'Saving…' : 'Save'}
                   </button>
+                  {p.isSeed ? null : (
+                    <button type="button" className="rw-btn rw-btn-ghost" onClick={() => onRemove(p.id)}>
+                      Remove
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
