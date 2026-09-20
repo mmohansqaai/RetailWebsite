@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { DemoBanner } from '../components/DemoBanner'
 import { useAuthStore } from '../stores/authStore'
 
 export function LoginPage() {
@@ -29,12 +30,13 @@ export function LoginPage() {
 
   return (
     <div className="rw-auth">
+      <DemoBanner />
       <div className="rw-auth-card">
         <div className="rw-auth-brand">
-          <div className="rw-logo">N</div>
+          <div className="rw-logo">B</div>
           <div>
-            <div className="rw-title">Nova Retail</div>
-            <div className="rw-subtitle">Sign in to your workspace</div>
+            <div className="rw-title">BayOne Retail</div>
+            <div className="rw-subtitle">Demo sign-in for testing only</div>
           </div>
         </div>
 
@@ -55,7 +57,7 @@ export function LoginPage() {
         </form>
 
         <div className="rw-auth-footer">
-          Demo: customer <strong>test@demo.com</strong> / <strong>password123</strong>
+          Testing credentials — customer <strong>test@demo.com</strong> / <strong>password123</strong>
           {' · '}
           admin <strong>admin@demo.com</strong> / <strong>admin123</strong>
         </div>

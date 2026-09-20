@@ -1,6 +1,6 @@
-# Nova Retail (Local App)
+# BayOne Retail (Demo — testing only)
 
-A realistic React + Vite retail web app (storefront + ops workspace) you can run locally and use as a target for Playwright/self-healing automation.
+A realistic React + Vite retail web app (storefront + ops workspace) you can run locally and use as a target for Playwright/self-healing automation. **This is a demo website for testing purposes only — not a live store.**
 
 ## Tech Stack
 

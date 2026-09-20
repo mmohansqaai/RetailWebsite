@@ -1,4 +1,4 @@
-# Deploy Nova Retail to the web (step by step)
+# Deploy BayOne Retail to the web (step by step)
 
 This project has **two deployable parts**:
 
@@ -130,7 +130,7 @@ Create `/etc/systemd/system/nova-api.service` (adjust paths and user):
 
 ```ini
 [Unit]
-Description=Nova Retail API
+Description=BayOne Retail API
 After=network.target
 
 [Service]

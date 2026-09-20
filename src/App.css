@@ -15,10 +15,40 @@
   font-weight: 700;
 }
 
-.rw-topbar {
+.rw-chrome {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.rw-demo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 1rem;
+  background: #b45309;
+  color: #fffbeb;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+  text-align: center;
+  border-bottom: 1px solid #92400e;
+}
+
+.rw-demo-banner-label {
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+
+.rw-topbar {
   background: rgba(242, 244, 248, 0.85);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(216, 223, 240, 0.9);
@@ -105,7 +135,7 @@
 
 .rw-sidebar {
   position: sticky;
-  top: 88px;
+  top: 132px;
   align-self: start;
   background: #fff;
   border: 1px solid #d8dff0;
@@ -542,8 +572,16 @@
 .rw-auth {
   min-height: 100vh;
   display: grid;
-  place-items: center;
-  padding: 2rem 1rem;
+  grid-template-rows: auto 1fr;
+}
+
+.rw-auth .rw-auth-card {
+  margin: 2rem auto;
+}
+
+.rw-auth .rw-demo-banner {
+  position: sticky;
+  top: 0;
 }
 
 .rw-auth-card {

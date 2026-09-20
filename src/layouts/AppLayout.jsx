@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
+import { DemoBanner } from '../components/DemoBanner'
 import { useAuthStore } from '../stores/authStore'
 import { useCartStore } from '../stores/cartStore'
 
@@ -21,23 +22,26 @@ export function AppLayout() {
 
   return (
     <div className="rw-shell">
-      <header className="rw-topbar">
-        <div className="rw-brand" role="banner">
-          <div className="rw-logo">N</div>
-          <div>
-            <div className="rw-title">Nova Retail</div>
-            <div className="rw-subtitle">Storefront + ops workspace</div>
+      <div className="rw-chrome">
+        <DemoBanner />
+        <header className="rw-topbar">
+          <div className="rw-brand" role="banner">
+            <div className="rw-logo">B</div>
+            <div>
+              <div className="rw-title">BayOne Retail</div>
+              <div className="rw-subtitle">Demo storefront + ops workspace</div>
+            </div>
           </div>
-        </div>
-        <div className="rw-top-actions">
-          <button className="rw-pill" onClick={() => navigate('/app/cart')}>Cart {cartCount}</button>
-          <div className="rw-user">
-            <div className="rw-user-name">{session?.user?.name}</div>
-            <div className="rw-user-meta">{session?.user?.email} · {session?.user?.role}</div>
+          <div className="rw-top-actions">
+            <button className="rw-pill" onClick={() => navigate('/app/cart')}>Cart {cartCount}</button>
+            <div className="rw-user">
+              <div className="rw-user-name">{session?.user?.name}</div>
+              <div className="rw-user-meta">{session?.user?.email} · {session?.user?.role}</div>
+            </div>
+            <button className="rw-btn rw-btn-ghost" onClick={logout}>Sign out</button>
           </div>
-          <button className="rw-btn rw-btn-ghost" onClick={logout}>Sign out</button>
-        </div>
-      </header>
+        </header>
+      </div>
 
       <div className="rw-body">
         <aside className="rw-sidebar">
